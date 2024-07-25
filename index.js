@@ -8,19 +8,11 @@ const port = 3000;
 app.use(bodyParser.json());
 
 // Base de dados em memória (simulando os dados do arquivo db.json)
-let db = {
-  "instagram": [
-    {"ronieremarques": "1234"},
-    {"ronieremarque": "1235"}
-  ],
-  "x": [
-    {"ronieremarque": "1235"}
-  ]
-};
+let db = {};
 
 // Verifica se o auth tem o formato "123"
 function checkAuth(auth) {
-    return auth === '3AD3D265DBC38CB33FA22EB69F4A3';
+    return auth === 'your_auth';
 }
 
 // Caminho inicial simples
