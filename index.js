@@ -1,12 +1,22 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const fs = require('fs');
 
 const app = express();
 const port = 3000;
 
 // Middleware para parse de JSON no corpo das requisições
 app.use(bodyParser.json());
+
+// Base de dados em memória (simulando os dados do arquivo db.json)
+let db = {
+  "instagram": [
+    {"ronieremarques": "1234"},
+    {"ronieremarque": "1235"}
+  ],
+  "x": [
+    {"ronieremarque": "1235"}
+  ]
+};
 
 // Verifica se o auth tem o formato "123"
 function checkAuth(auth) {
@@ -15,7 +25,7 @@ function checkAuth(auth) {
 
 // Caminho inicial simples
 app.get('/', (req, res) => {
-    res.redirect('https://github.com/ronieremarques');
+    res.send('Bem-vindo!');
 });
 
 // Caminho para obter senhas de uma plataforma específica
@@ -27,31 +37,16 @@ app.get('/getpasswords/:auth/:plataforma', (req, res) => {
         return res.status(403).send('Acesso negado.');
     }
 
-    fs.readFile('db.json', 'utf8', (err, data) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).send('Erro interno.');
-        }
+    if (!db[plataforma]) {
+        return res.status(404).send('Plataforma não encontrada.');
+    }
 
-        try {
-            const db = JSON.parse(data);
-
-            if (!db[plataforma]) {
-                return res.status(404).send('Plataforma não encontrada.');
-            }
-
-            const senhas = db[plataforma];
-            res.json(senhas);
-
-        } catch (error) {
-            console.error(error);
-            res.status(500).send('Erro interno.');
-        }
-    });
+    const senhas = db[plataforma];
+    res.json(senhas);
 });
 
 // Caminho para criar senha para uma plataforma específica
-app.get('/createpasswords/:auth/:plataforma/:usuario/:senha', (req, res) => {
+app.post('/createpasswords/:auth/:plataforma/:usuario/:senha', (req, res) => {
     const auth = req.params.auth;
     const plataforma = req.params.plataforma;
     const usuario = req.params.usuario;
@@ -61,45 +56,22 @@ app.get('/createpasswords/:auth/:plataforma/:usuario/:senha', (req, res) => {
         return res.status(403).send('Acesso negado.');
     }
 
-    fs.readFile('db.json', 'utf8', (err, data) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).send('Erro interno.');
-        }
+    // Verifica se a plataforma já existe no banco
+    if (!db[plataforma]) {
+        db[plataforma] = [];
+    }
 
-        try {
-            const db = JSON.parse(data);
+    // Verifica se o usuário já existe para essa plataforma
+    const usuarioExistente = db[plataforma].find(item => Object.keys(item)[0] === usuario);
 
-            // Verifica se a plataforma já existe no banco
-            if (!db[plataforma]) {
-                db[plataforma] = [];
-            }
+    if (usuarioExistente) {
+        return res.status(400).send('Usuário já existe para esta plataforma.');
+    }
 
-            // Verifica se o usuário já existe para essa plataforma
-            const usuarioExistente = db[plataforma].find(item => Object.keys(item)[0] === usuario);
+    // Adiciona a nova senha para a plataforma especificada
+    db[plataforma].push({ [usuario]: senha });
 
-            if (usuarioExistente) {
-                return res.status(400).send('Usuário já existe para esta plataforma.');
-            }
-
-            // Adiciona a nova senha para a plataforma especificada
-            db[plataforma].push({ [usuario]: senha });
-
-            // Escreve de volta no arquivo db.json
-            fs.writeFile('db.json', JSON.stringify(db), (err) => {
-                if (err) {
-                    console.error(err);
-                    return res.status(500).send('Erro interno.');
-                }
-
-                res.send('Senha criada com sucesso.');
-            });
-
-        } catch (error) {
-            console.error(error);
-            res.status(500).send('Erro interno.');
-        }
-    });
+    res.send('Senha criada com sucesso.');
 });
 
 // Inicia o servidor
